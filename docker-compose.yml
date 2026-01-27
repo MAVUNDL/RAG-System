@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # --- ChromaDB: The Vector Store ---
+  chroma-db:
+    image: chromadb/chroma:latest
+    container_name: chroma-vector-db
+    ports:
+      - "8001:8000" # Expose to host on 8001
+    volumes:
+      # Persist your vectorized documents so they stay vectorized after restart
+      - ./chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ALLOW_RESET=TRUE
+    networks:
+      - rag-network
+
+  # --- Spring Boot: The Engine & UI ---
+  rag-app:
+    build: .
+    container_name: risk-disclosure-app
+    ports:
+      - "8080:8080" # Spring Web
+      - "8888:8888" # Javelit UI
+    environment:
+      # Tell Java to talk to the internal docker name 'chroma-db'
+      - CHROMA_URL=http://chroma-db:8000
+      - OPEN_API_KEY=${OPEN_API_KEY}
+      # Matches your local structure for code compatibility
+      - WATCHER_PATH=/app/src/main/resources/static/ECL-Methodology-Disclosures
+    depends_on:
+      - chroma-db
+    networks:
+      - rag-network
+
+networks:
+  rag-network:
+    driver: bridge

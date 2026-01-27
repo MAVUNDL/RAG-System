@@ -31,7 +31,11 @@ public class IngestionPipeline {
         this.documentRegistry = documentRegistry;
         this.documentStorageService = documentStorageService;
         this.documentParser = new ApacheTikaDocumentParser();
-        this.directoryPath = Paths.get("src/main/resources/static/ECL-Methodology-Disclosures");
+        String folderPath = System.getenv().getOrDefault(
+                "WATCHER_PATH",
+                "src/main/resources/static/ECL-Methodology-Disclosures"
+        );
+        this.directoryPath = Paths.get(folderPath);
     }
 
     public Document processDocument(File file) {

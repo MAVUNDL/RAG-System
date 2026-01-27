@@ -17,12 +17,13 @@ public class StorageConfig {
 
     @Bean
     public ChromaEmbeddingStore chromaDB(){
+        String chromaUrl = System.getenv().getOrDefault("CHROMA_URL", "http://localhost:8001");
         return ChromaEmbeddingStore.builder()
                 .apiVersion(ChromaApiVersion.V2)
-                .baseUrl("http://localhost:8001")
+                .baseUrl(chromaUrl)
                 .tenantName("default")
                 .databaseName("default")
-                .collectionName("my-rag-collection")
+                .collectionName("risk_disclosures")
                 .build();
     }
 
