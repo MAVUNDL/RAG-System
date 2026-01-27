@@ -1,5 +1,8 @@
-package com.example.demo.ai.rag.ingestion;
+package com.example.demo.ai.rag.ingestion.configuration;
 
+import com.example.demo.ai.rag.ingestion.pipeline.DocumentRegistry;
+import com.example.demo.ai.rag.ingestion.pipeline.IngestionPipeline;
+import com.example.demo.ai.rag.ingestion.MetadataEnricher.DocumentSummarizerAssistant;
 import com.example.demo.ai.rag.transformation.TextCleaningTransformer;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
@@ -29,9 +32,11 @@ public class IngestionConfig {
         return new TextCleaningTransformer();
     }
 
+
+
     @Bean
-    public IngestionPipeline IngestionPipeline( DocumentSummarizerAssistant documentSummarizerAssistant, TextCleaningTransformer textCleaningTransformer) {
-        return new IngestionPipeline(documentSummarizerAssistant, textCleaningTransformer);
+    public IngestionPipeline IngestionPipeline(DocumentSummarizerAssistant documentSummarizerAssistant, TextCleaningTransformer textCleaningTransformer, DocumentRegistry documentRegistry) {
+        return new IngestionPipeline(documentSummarizerAssistant, textCleaningTransformer, documentRegistry);
     }
 
 }
