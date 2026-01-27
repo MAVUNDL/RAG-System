@@ -1,4 +1,4 @@
-package com.example.demo.ai.rag.transformation;
+package com.example.demo.rag.rag.transformation;
 
 import dev.langchain4j.data.document.DocumentTransformer;
 import org.springframework.context.annotation.Bean;

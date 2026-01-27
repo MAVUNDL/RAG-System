@@ -1,4 +1,4 @@
-package com.example.demo.ai.rag.ingestion.automation;
+package com.example.demo.rag.rag.ingestion.automation;
 
 import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.ApplicationArguments;

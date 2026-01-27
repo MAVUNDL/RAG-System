@@ -1,8 +1,9 @@
-package com.example.demo.ai.rag.ingestion.pipeline;
+package com.example.demo.rag.rag.ingestion.pipeline;
 
-import com.example.demo.ai.rag.ingestion.MetadataEnricher.DocumentMetadata;
-import com.example.demo.ai.rag.ingestion.MetadataEnricher.DocumentSummarizerAssistant;
-import com.example.demo.ai.rag.transformation.TextCleaningTransformer;
+import com.example.demo.rag.rag.ingestion.MetadataEnricher.DocumentMetadata;
+import com.example.demo.rag.rag.ingestion.MetadataEnricher.DocumentSummarizerAssistant;
+import com.example.demo.rag.rag.storage.service.DocumentStorageService;
+import com.example.demo.rag.rag.transformation.TextCleaningTransformer;
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.DocumentParser;
 import dev.langchain4j.data.document.Metadata;
@@ -22,11 +23,13 @@ public class IngestionPipeline {
     private final DocumentSummarizerAssistant documentSummarizerAssistant;
     private final TextCleaningTransformer textCleaningTransformer;
     private final DocumentRegistry documentRegistry;
+    private final DocumentStorageService documentStorageService;
 
-    public IngestionPipeline(DocumentSummarizerAssistant documentSummarizerAssistant, TextCleaningTransformer textCleaningTransformer, DocumentRegistry documentRegistry) {
+    public IngestionPipeline(DocumentSummarizerAssistant documentSummarizerAssistant, TextCleaningTransformer textCleaningTransformer, DocumentRegistry documentRegistry, DocumentStorageService documentStorageService) {
         this.documentSummarizerAssistant = documentSummarizerAssistant;
         this.textCleaningTransformer = textCleaningTransformer;
         this.documentRegistry = documentRegistry;
+        this.documentStorageService = documentStorageService;
         this.documentParser = new ApacheTikaDocumentParser();
         this.directoryPath = Paths.get("src/main/resources/static/ECL-Methodology-Disclosures");
     }
@@ -71,7 +74,10 @@ public class IngestionPipeline {
 
     public void processAndRegister(File file) {
         Document document = processDocument(file);
-        this.documentRegistry.addDocument(document);
+        if (document != null) {
+            documentStorageService.ingestDocument(document); // persist
+            this.documentRegistry.addDocument(document); // for UI registry
+        }
     }
 
     public void runInitialLoad(){

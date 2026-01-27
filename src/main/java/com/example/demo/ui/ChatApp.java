@@ -1,33 +1,56 @@
 package com.example.demo.ui;
 
-import com.example.demo.ai.rag.ingestion.pipeline.DocumentRegistry;
-import com.example.demo.ai.rag.ingestion.pipeline.IngestionPipeline;
+import com.example.demo.rag.configuration.Assistant;
+import com.example.demo.rag.rag.ingestion.pipeline.DocumentRegistry;
+import com.example.demo.rag.rag.ingestion.pipeline.IngestionPipeline;
 import dev.langchain4j.data.document.Document;
+import dev.langchain4j.service.Result;
 import io.javelit.components.layout.ColumnsComponent;
 import io.javelit.core.Jt;
 import io.javelit.core.JtContainer;
 import io.javelit.core.Server;
+import org.intellij.lang.annotations.Language;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Component
 public class ChatApp {
     private final IngestionPipeline pipeline;
     private final DocumentRegistry documentRegistry;
+    private final Assistant assistant;
 
-    public ChatApp(IngestionPipeline pipeline, DocumentRegistry documentRegistry) {
+    public ChatApp(IngestionPipeline pipeline, DocumentRegistry documentRegistry, Assistant assistant) {
         this.pipeline = pipeline;
         this.documentRegistry = documentRegistry;
+        this.assistant = assistant;
         startServer();
     }
 
     private void app() {
-        // --- Sidebar: Main Controls ---
-        Jt.title("RAG Pipeline Control").use(Jt.SIDEBAR);
+        // Initialize state to prevent NullPointerExceptions
+        Jt.sessionState().putIfAbsent("chat_history", new ArrayList<String>());
+        Jt.sessionState().putIfAbsent("is_ingesting", false);
+        Jt.sessionState().putIfAbsent("is_thinking", false);
 
+        var currentPage = Jt.navigation(
+                // Set "/" to dashboard so it's not blank on load
+                Jt.page("/dashboard", this::dashboardPage).title("Dashboard").icon("📊"),
+                Jt.page("/chat", this::chatPage).title("AI Assistant").icon("💬")
+        ).use();
+
+        // This triggers the rendering of the matched page
+        currentPage.run();
+    }
+
+    private void dashboardPage() {
+        Jt.title("System Dashboard").use();
+
+        Jt.title("RAG Controls").use(Jt.SIDEBAR);
         boolean isProcessing = Jt.sessionState().getBoolean("is_ingesting", false);
 
         if (Jt.button("🚀 Start Initial Batch").disabled(isProcessing).use(Jt.SIDEBAR)) {
@@ -37,84 +60,115 @@ public class ChatApp {
         }
 
         Jt.markdown("---").use(Jt.SIDEBAR);
-        Jt.markdown("**Folder Monitor:**").use(Jt.SIDEBAR);
-        Jt.code("static/ECL-Methodology-Disclosures").use(Jt.SIDEBAR);
+        Jt.info("Watching static resources...").use(Jt.SIDEBAR);
 
-        // --- Main Dashboard Layout ---
         List<Document> documents = documentRegistry.getAllDocuments();
-
-        var metricsCols = Jt.columns(3).gap(ColumnsComponent.Gap.SMALL).use();
-
-        // FIX: Added .key() to metrics containers to prevent ID clashes
-        var container1 = Jt.container().border(true).key("metric_total").use(metricsCols.col(0));
-        Jt.markdown("#### Total Documents").use(container1);
-        Jt.title(String.valueOf(documents.size())).use(container1);
-
-        var container2 = Jt.container().border(true).key("metric_status").use(metricsCols.col(1));
-        Jt.markdown("#### System Status").use(container2);
-        Jt.text(documentRegistry.getLastActionStatus()).use(container2);
-
-        var container3 = Jt.container().border(true).key("metric_mode").use(metricsCols.col(2));
-        Jt.markdown("#### Mode").use(container3);
-        if (isProcessing) {
-            Jt.text("⏳ AI Extracting...").use(container3);
-        } else {
-            Jt.text("🟢 Real-time Active").use(container3);
-        }
+        renderMetrics(documents, isProcessing);
 
         Jt.markdown("---").use();
 
         var mainTabs = Jt.tabs(List.of("Registry Table", "Detailed View", "System Logs")).use();
-
         renderTableTab(documents, mainTabs.tab("Registry Table"));
         renderDetailsTab(documents, mainTabs.tab("Detailed View"));
         renderLogsTab(mainTabs.tab("System Logs"));
     }
 
-    private void renderTableTab(List<Document> documents, JtContainer parent) {
-        if (documents.isEmpty()) {
-            Jt.info("No documents found. Start the pipeline or add a file to the folder.").use(parent);
-            return;
+    private void chatPage() {
+        Jt.title("AI Assistant").use();
+        Jt.markdown("Query methodology disclosures via Advanced RAG (Query Transformation + Chroma).").use();
+
+        List<String> history = (List<String>) Jt.sessionState().get("chat_history");
+        boolean isThinking = Jt.sessionState().getBoolean("is_thinking", false);
+
+        // Chat Container
+        var chatContainer = Jt.container().height(450).border(true).use();
+        for (@Language("markdown") String msg : history) {
+            Jt.markdown(msg).use(chatContainer);
         }
 
-        Jt.table(documents.stream().map(d -> Map.of(
+        if (isThinking) {
+            Jt.info("⏳ AI is searching documents and formulating a response...").use(chatContainer);
+        }
+
+        Jt.markdown("---").use();
+
+        // Input Form
+        var form = Jt.form().use();
+        String query = Jt.textInput("question")
+                .placeholder("Ask about ECL methodology...")
+                .disabled(isThinking) // Prevent typing while waiting
+                .use(form);
+
+        if (Jt.formSubmitButton("Ask").disabled(isThinking).use(form)) {
+            if (query != null && !query.isBlank()) {
+                history.add("**User:** " + query);
+                Jt.sessionState().put("is_thinking", true);
+
+                try {
+                    // 1. Get the Result object instead of just a string
+                    Result<String> result = assistant.chat(query);
+                    String aiAnswer = result.content();
+
+                    // 2. Extract unique file names from the retrieved segments
+                    String sources = result.sources().stream()
+                            .map(source -> source.textSegment().metadata().getString("file_name"))
+                            .filter(Objects::nonNull)
+                            .distinct()
+                            .collect(Collectors.joining(", "));
+
+                    // 3. Add to UI with a clear citation line
+                    String fullResponse = "**Assistant:**\n" + aiAnswer +
+                            "\n\n---\n**Sources used:** " + (sources.isEmpty() ? "Internal Knowledge" : sources);
+
+                    history.add(fullResponse);
+
+                } catch (Exception e) {
+                    history.add("**Assistant:** ❌ Error: " + e.getMessage());
+                } finally {
+                    Jt.sessionState().put("is_thinking", false);
+                }
+
+                Jt.sessionState().put("chat_history", history);
+            }
+        }
+    }
+
+    private void renderMetrics(List<Document> documents, boolean isProcessing) {
+        var cols = Jt.columns(3).gap(ColumnsComponent.Gap.SMALL).use();
+
+        var c1 = Jt.container().border(true).key("m1").use(cols.col(0));
+        Jt.markdown("#### Total Docs").use(c1);
+        Jt.title(String.valueOf(documents.size())).use(c1);
+
+        var c2 = Jt.container().border(true).key("m2").use(cols.col(1));
+        Jt.markdown("#### Status").use(c2);
+        Jt.text(documentRegistry.getLastActionStatus()).use(c2);
+
+        var c3 = Jt.container().border(true).key("m3").use(cols.col(2));
+        Jt.markdown("#### Mode").use(c3);
+        Jt.text(isProcessing ? "⏳ Processing" : "🟢 Online").use(c3);
+    }
+
+    private void renderTableTab(List<Document> docs, JtContainer parent) {
+        if (docs.isEmpty()) { Jt.info("No documents found.").use(parent); return; }
+        Jt.table(docs.stream().map(d -> Map.of(
                 "File", Objects.toString(d.metadata().getString("file_name"), "Unknown"),
-                "Language", Objects.toString(d.metadata().getString("language"), "en"),
                 "ID", Objects.toString(d.metadata().getString("documentId"), "N/A")
         )).toList()).use(parent);
     }
 
-    private void renderDetailsTab(List<Document> documents, JtContainer parent) {
-        if (documents.isEmpty()) {
-            Jt.text("Nothing to display yet.").use(parent);
-            return;
-        }
-
-        for (Document doc : documents) {
-            String fileName = Objects.toString(doc.metadata().getString("file_name"), "Unknown File");
-            String docId = Objects.toString(doc.metadata().getString("documentId"), "no-id");
-
-            // FIX: Added .key() using docId to ensure unique expanders in the loop
-            var expander = Jt.expander("Details for: " + fileName)
-                    .key("expander_" + docId)
-                    .expanded(false)
-                    .use(parent);
-
-            Jt.markdown("**AI-Generated Summary:**").use(expander);
-            Jt.text(Objects.toString(doc.metadata().getString("summary"), "No summary available")).use(expander);
-
-            Jt.markdown("**Topics Identified:**").use(expander);
-            Jt.code(Objects.toString(doc.metadata().getString("topics"), "[]")).use(expander);
-
-            Jt.markdown("**Raw Metadata Path:**").use(expander);
-            Jt.text(Objects.toString(doc.metadata().getString("path"), "N/A")).use(expander);
+    private void renderDetailsTab(List<Document> docs, JtContainer parent) {
+        for (Document doc : docs) {
+            String id = doc.metadata().getString("documentId");
+            var exp = Jt.expander("📄 " + doc.metadata().getString("file_name")).key("exp_"+id).use(parent);
+            Jt.markdown("**AI Summary:**").use(exp);
+            Jt.text(Objects.toString(doc.metadata().getString("summary"), "Not available")).use(exp);
         }
     }
 
     private void renderLogsTab(JtContainer parent) {
         Jt.markdown("### Background Event Stream").use(parent);
         Jt.code(documentRegistry.getLastActionStatus()).use(parent);
-        Jt.text("The FileSystemWatcher is currently polling every 5 seconds.").use(parent);
     }
 
     private void startServer() {

@@ -1,4 +1,4 @@
-package com.example.demo.ai.rag.ingestion.MetadataEnricher;
+package com.example.demo.rag.rag.ingestion.MetadataEnricher;
 
 import dev.langchain4j.model.output.structured.Description;
 import java.util.List;

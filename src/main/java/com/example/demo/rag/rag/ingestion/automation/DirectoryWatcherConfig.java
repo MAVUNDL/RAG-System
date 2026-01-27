@@ -1,4 +1,4 @@
-package com.example.demo.ai.rag.ingestion.automation;
+package com.example.demo.rag.rag.ingestion.automation;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

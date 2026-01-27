@@ -1,6 +1,6 @@
-package com.example.demo.ai.rag.ingestion.automation;
+package com.example.demo.rag.rag.ingestion.automation;
 
-import com.example.demo.ai.rag.ingestion.pipeline.IngestionPipeline;
+import com.example.demo.rag.rag.ingestion.pipeline.IngestionPipeline;
 import org.springframework.boot.devtools.filewatch.ChangedFile;
 import org.springframework.boot.devtools.filewatch.ChangedFiles;
 import org.springframework.boot.devtools.filewatch.FileChangeListener;

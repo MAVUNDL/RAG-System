@@ -1,4 +1,4 @@
-package com.example.demo.ai.rag.ingestion.pipeline;
+package com.example.demo.rag.rag.ingestion.pipeline;
 
 import dev.langchain4j.data.document.Document;
 import org.springframework.stereotype.Component;

@@ -1,9 +1,10 @@
-package com.example.demo.ai.rag.ingestion.configuration;
+package com.example.demo.rag.rag.ingestion.configuration;
 
-import com.example.demo.ai.rag.ingestion.pipeline.DocumentRegistry;
-import com.example.demo.ai.rag.ingestion.pipeline.IngestionPipeline;
-import com.example.demo.ai.rag.ingestion.MetadataEnricher.DocumentSummarizerAssistant;
-import com.example.demo.ai.rag.transformation.TextCleaningTransformer;
+import com.example.demo.rag.rag.ingestion.pipeline.DocumentRegistry;
+import com.example.demo.rag.rag.ingestion.pipeline.IngestionPipeline;
+import com.example.demo.rag.rag.ingestion.MetadataEnricher.DocumentSummarizerAssistant;
+import com.example.demo.rag.rag.storage.service.DocumentStorageService;
+import com.example.demo.rag.rag.transformation.TextCleaningTransformer;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModelName;
@@ -35,8 +36,8 @@ public class IngestionConfig {
 
 
     @Bean
-    public IngestionPipeline IngestionPipeline(DocumentSummarizerAssistant documentSummarizerAssistant, TextCleaningTransformer textCleaningTransformer, DocumentRegistry documentRegistry) {
-        return new IngestionPipeline(documentSummarizerAssistant, textCleaningTransformer, documentRegistry);
+    public IngestionPipeline IngestionPipeline(DocumentSummarizerAssistant documentSummarizerAssistant, TextCleaningTransformer textCleaningTransformer, DocumentRegistry documentRegistry, DocumentStorageService documentStorageService) {
+        return new IngestionPipeline(documentSummarizerAssistant, textCleaningTransformer, documentRegistry, documentStorageService);
     }
 
 }
