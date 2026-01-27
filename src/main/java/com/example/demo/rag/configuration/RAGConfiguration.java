@@ -49,11 +49,14 @@ public class RAGConfiguration {
                 .embeddingStore(store)
                 .embeddingModel(embeddingModel)
                 .maxResults(5)
+                .minScore(0.6)
                 .build();
 
         // We provide a description of the data so the LLM knows when to route there
         Map<ContentRetriever, String> retrieverToDescription = Map.of(
-                contentRetriever, "Use this for questions about Expected Credit Loss (ECL), IFRS9, risk management, or specific financial disclosure documents."
+                contentRetriever, "ONLY use this for technical questions about Expected Credit Loss (ECL), IFRS 9 formulas, " +
+                        "bank risk disclosures, or specific methodology documents. " +
+                        "DO NOT use this for greetings, general conversation, or non-financial questions."
         );
 
         QueryRouter queryRouter = new LanguageModelQueryRouter(chatModel, retrieverToDescription);
@@ -75,9 +78,12 @@ public class RAGConfiguration {
                 .retrievalAugmentor(augmentor)
                 .chatMemory(MessageWindowChatMemory.withMaxMessages(10))
                 .systemMessageProvider(chatId ->
-                        "You are a professional financial assistant for ECL disclosures. " +
-                        "Always cite the 'file_name' from the metadata. " +
-                        "If the information is not in the context, say you don't know."
+                        "You are a professional financial assistant specialized in Expected Credit Loss (ECL) disclosures. " +
+                                "GUIDELINES: " +
+                                "1. If the user asks a technical question about ECL, IFRS 9, or risk management, USE the provided context and cite the 'file_name'. " +
+                                "2. If the user query is a general greeting (like 'hello'), or a general question unrelated to the financial documents, " +
+                                "DO NOT use the context. Instead, respond as a polite, helpful AI assistant, and do not retrieve any document from the vector store. " +
+                                "3. For technical financial questions NOT covered by the context, inform the user you don't have that specific data in your registry."
                 )
                 .build();
     }

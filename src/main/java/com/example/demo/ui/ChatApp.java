@@ -131,6 +131,12 @@ public class ChatApp {
                 Jt.sessionState().put("chat_history", history);
             }
         }
+
+        if (Jt.button("🗑️ Clear Conversation").use(Jt.SIDEBAR)) {
+            Jt.sessionState().put("chat_history", new ArrayList<String>());
+            // If you are using MessageWindowChatMemory, you'd clear it here too
+            Jt.success("Memory cleared!").use(Jt.SIDEBAR);
+        }
     }
 
     private void renderMetrics(List<Document> documents, boolean isProcessing) {
